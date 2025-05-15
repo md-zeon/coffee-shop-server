@@ -27,12 +27,20 @@ async function run() {
         const coffeeDb = client.db("coffeeDB");
         const coffeeCollection = coffeeDb.collection("coffees");
 
+        // add a coffee
         app.post('/coffees', async (req, res) => {
             const newCoffee = req.body;
             console.log(newCoffee);
             const result = await coffeeCollection.insertOne(newCoffee);
             res.send(result);
         });
+
+        // get all coffees
+        app.get('/coffees', async (req, res) => {
+            const cursor = coffeeCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        })
 
 
 		// Send a ping to confirm a successful connection
