@@ -2,6 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const dotenv = require("dotenv");
+const admin = require("firebase-admin");
+
+admin.initializeApp({
+	credential: admin.credential.cert(require("./serviceAccount.json")),
+});
+
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
@@ -77,6 +83,55 @@ async function run() {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const result = await coffeeCollection.deleteOne(query);
+			res.send(result);
+		});
+
+		// user related API
+
+		const userCollection = coffeeDb.collection("users");
+
+		// get all users
+
+		app.get("/users", async (req, res) => {
+			const cursor = userCollection.find();
+			const result = await cursor.toArray();
+			res.send(result);
+		});
+
+		// add a user
+		app.post("/users", async (req, res) => {
+			const userProfile = req.body;
+			console.log(userProfile);
+			const result = await userCollection.insertOne(userProfile);
+			res.send(result);
+		});
+
+		// update a single field in user
+		app.patch("/users", async (req, res) => {
+			const { email, lastSignInTime } = req.body;
+			const filter = { email: email };
+			const updatedDoc = {
+				$set: {
+					lastSignInTime: lastSignInTime,
+				},
+			};
+
+			const result = await userCollection.updateOne(filter, updatedDoc);
+			res.send(result);
+		});
+
+		// delete a user
+		app.delete("/users/:id", async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id) };
+			const user = await userCollection.findOne(query);
+			const uid = user.uid;
+			const result = await userCollection.deleteOne(query);
+
+			if (result.deletedCount && uid) {
+				const firebaseDelete = await admin.auth().deleteUser(uid);
+				console.log(firebaseDelete);
+			}
 			res.send(result);
 		});
 
